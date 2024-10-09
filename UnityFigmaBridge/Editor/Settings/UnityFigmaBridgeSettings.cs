@@ -34,6 +34,9 @@ namespace UnityFigmaBridge.Editor.Settings
         [Tooltip("Generate a C# file containing all found screens")]
         public bool CreateScreenNameCSharpFile = false;
         
+        [Tooltip("Use Scene Graph Shaders")]
+        public bool UseSceneGraphShaders = false;
+        
         [Tooltip("If false, the generator will not attempt to build any nodes marked for export")]
         public bool GenerateNodesMarkedForExport = true;
         

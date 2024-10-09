@@ -85,8 +85,15 @@ namespace UnityFigmaBridge.Runtime.UI
         private static readonly int s_GradientHandlePositionsPropertyID = Shader.PropertyToID("_GradientHandlePositions");
         private static readonly int s_GradientNumStopsPropertyID = Shader.PropertyToID("_GradientNumStops");
         private static readonly int s_ArcAngleRangeInnerRadiusPropertyID = Shader.PropertyToID("_ArcAngleRangeInnerRadius");
+        private static readonly int s_GradientTexture = Shader.PropertyToID("_Gradient");
+        private static readonly int s_GradientHandle1 = Shader.PropertyToID("_GradientHandle1");
+        private static readonly int s_GradientHandle2 = Shader.PropertyToID("_GradientHandle2");
+        private static readonly int s_GradientHandle3 = Shader.PropertyToID("_GradientHandle3");
+
+        public bool UseShaderGraph = false;
         
 
+        private const string FIGMA_SHADER_NAME_SHADER_GRAPH = "Shader Graphs/FigmaImageShaderGraph";
         private const string FIGMA_SHADER_NAME = "Figma/FigmaImageShader";
         private Material m_DynamicMaterial;
 
@@ -437,7 +444,7 @@ namespace UnityFigmaBridge.Runtime.UI
         /// <returns></returns>
         private Material CreateDynamicMaterial()
         {
-            return m_DynamicMaterial = new Material(Shader.Find(FIGMA_SHADER_NAME));
+            return m_DynamicMaterial = new Material(Shader.Find(UseShaderGraph ? FIGMA_SHADER_NAME_SHADER_GRAPH : FIGMA_SHADER_NAME));
         }
 
         /// <summary>
@@ -491,25 +498,49 @@ namespace UnityFigmaBridge.Runtime.UI
         /// <param name="mat"></param>
         private void SetGradientProperties(Material mat)
         {
-            var gradientStopCount = m_FillGradient.colorKeys.Length;
-            var gradientColors = new Color[MAX_GRADIENT_STOPS];
-            var gradientStops = new float[MAX_GRADIENT_STOPS];
-            for (var i = 0; i < gradientStopCount; i++)
+            if (mat.HasTexture(s_GradientTexture))
             {
-                gradientColors[i] = m_FillGradient.colorKeys[i].color;
-                gradientStops[i] = m_FillGradient.colorKeys[i].time;
-                // Apply alpha to key by resampling to this position
-                var percentGradientLength = i / (float)(i - 1);
-                gradientColors[i].a= m_FillGradient.Evaluate(percentGradientLength).a;
+                Texture2D gradientTexture = new Texture2D(128, 1, TextureFormat.RGBA32, false, true)
+                {
+                    wrapMode = TextureWrapMode.Clamp,
+                    filterMode = FilterMode.Bilinear
+                };
+                for(int pixelIndexX = 0 ; pixelIndexX < gradientTexture.width ; pixelIndexX++)
+                {
+                    float t = (float)pixelIndexX / (gradientTexture.width - 1);
+                    Color pixelColor = m_FillGradient.Evaluate(t);
+                    gradientTexture.SetPixel(pixelIndexX, 0, pixelColor);
+                }
+                gradientTexture.Apply();
+                mat.SetTexture(s_GradientTexture, gradientTexture);
+                mat.SetVector(s_GradientHandle1, m_GradientHandlePositions[0]);
+                mat.SetVector(s_GradientHandle2, m_GradientHandlePositions[1]);
+                mat.SetVector(s_GradientHandle3, m_GradientHandlePositions[2]);
+            }
+            else
+            {
+                var gradientStopCount = m_FillGradient.colorKeys.Length;
+                var gradientColors = new Color[MAX_GRADIENT_STOPS];
+                var gradientStops = new float[MAX_GRADIENT_STOPS];
+                for (var i = 0; i < gradientStopCount; i++)
+                {
+                    gradientColors[i] = m_FillGradient.colorKeys[i].color;
+                    gradientStops[i] = m_FillGradient.colorKeys[i].time;
+                    // Apply alpha to key by resampling to this position
+                    var percentGradientLength = i / (float)(i - 1);
+                    gradientColors[i].a= m_FillGradient.Evaluate(percentGradientLength).a;
+                }
+
+                // Since color interpolation must be done in gamma space,
+                // the gradient colors are passed to the shader without conversion to linear space,
+                // even if the color space setting is set to linear.
+                mat.SetColorArray(s_GradientColorsPropertyID,gradientColors);
+                mat.SetFloatArray(s_GradientStopsPropertyID,gradientStops);
+                mat.SetFloat(s_GradientNumStopsPropertyID,gradientStopCount);
+                mat.SetFloatArray(s_GradientHandlePositionsPropertyID,GetFloatArray(m_GradientHandlePositions));
             }
 
-            // Since color interpolation must be done in gamma space,
-            // the gradient colors are passed to the shader without conversion to linear space,
-            // even if the color space setting is set to linear.
-            mat.SetColorArray(s_GradientColorsPropertyID,gradientColors);
-            mat.SetFloatArray(s_GradientStopsPropertyID,gradientStops);
-            mat.SetFloat(s_GradientNumStopsPropertyID,gradientStopCount);
-            mat.SetFloatArray(s_GradientHandlePositionsPropertyID,GetFloatArray(m_GradientHandlePositions));
+            
         }
 
         private static float[] GetFloatArray(Vector2[] input)

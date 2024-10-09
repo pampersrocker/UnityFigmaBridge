@@ -37,6 +37,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                     // Create as needed (in case an override has specified new properties)
                     var figmaImage = nodeGameObject.GetComponent<FigmaImage>();
                     if (figmaImage == null) figmaImage = nodeGameObject.AddComponent<FigmaImage>();
+                    figmaImage.UseShaderGraph = figmaImportProcessData.Settings.UseSceneGraphShaders;
                     // We use different properties, depending on Figma shape
                     switch (node.type)
                     {
@@ -196,7 +197,7 @@ namespace UnityFigmaBridge.Editor.Nodes
                         outlineWidth = Mathf.Clamp(outlineWidth, 0, 0.5f);
                     }
                     var effectMaterialPreset = FontManager.GetEffectMaterialPreset(matchingFontMapping,
-                        hasShadowEffect, shadowColor, shadowDistance, node.strokes.Length>0, outlineColor, outlineWidth);
+                        hasShadowEffect, shadowColor, shadowDistance, node.strokes.Length>0, outlineColor, outlineWidth, figmaImportProcessData.Settings.UseSceneGraphShaders);
                     text.fontMaterial = effectMaterialPreset;
 
                     

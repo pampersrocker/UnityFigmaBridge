@@ -158,7 +158,7 @@ namespace UnityFigmaBridge.Editor.Fonts
         
         public static Material GetEffectMaterialPreset(FigmaFontMapEntry fontMapEntry, bool shadow, Color shadowColor,
             Vector2 shadowDistance, bool outline,
-            Color outlineColor, float outlineThickness)
+            Color outlineColor, float outlineThickness, bool useSceneGraphShaders)
         {
             // Do we have a matching material?
             var materialPresets = fontMapEntry.FontmaterialVariations.Count;
@@ -180,7 +180,7 @@ namespace UnityFigmaBridge.Editor.Fonts
             // No match, create new preset
             var newMaterialPreset = new Material(fontMapEntry.FontAsset.material);
             // We use a modified shader that handles distance from edge better
-            newMaterialPreset.shader = Shader.Find("Figma/TextMeshPro");
+            newMaterialPreset.shader = useSceneGraphShaders ? Shader.Find("TextMeshPro/Mobile/Distance Field") : Shader.Find("Figma/TextMeshPro");
             
             var materialName = $"{fontMapEntry.FontAsset.name}_variant_{materialPresets}";
             newMaterialPreset.name = materialName;
